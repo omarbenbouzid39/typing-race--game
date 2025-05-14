@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
-    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سباق الكتابة السريعة</title>
@@ -338,10 +337,9 @@
             </div>
         </div>
         
-       <div id="textPrompt" class="text-prompt">
-    <div id="text-display"></div>
-</div>
-
+        <div class="text-prompt" id="textPrompt">
+            أحد الأيام قرر سامي أن يبدأ تعلم البرمجة. جلس أمام الحاسوب وأخذ يدرس... بعد عدة ساعات من المحاولة، تمكن من كتابة أول برنامج بسيط له. وشعر بسعادة كبيرة عندما رأى النتيجة تظهر على الشاشة.
+        </div>
         
         <div class="typing-area">
             <input type="text" class="typing-input" id="typingInput" placeholder="اكتب هنا..." dir="rtl">
@@ -685,18 +683,11 @@
         // بدء السباق
         function startRace() {
             toggleModal(elements.waitingModal, false);
-            function renderColoredText(text) {
-    const display = document.getElementById('text-display');
-    display.innerHTML = text
-        .split('')
-        .map((char, index) => `<span id="char-${index}">${char}</span>`)
-        .join('');
-}
-
+            
             // تعيين النص الحالي
             const currentText = sampleTexts[gameState.currentTextIndex];
-            renderColoredText(currentText);
-
+            elements.textPrompt.textContent = currentText;
+            
             // تحديث مؤشر التقدم
             elements.progressIndicator.textContent = `${gameState.currentTextIndex + 1}/${sampleTexts.length}`;
             
@@ -846,23 +837,10 @@
         // معالجة الكتابة في حقل النص
         function handleTyping() {
             if (!gameState.raceStarted || gameState.raceFinished) return;
-            sendProgress(progress);
-
+            
             const currentText = sampleTexts[gameState.currentTextIndex];
             const typedText = elements.typingInput.value;
-            for (let i = 0; i < currentText.length; i++) {
-    const span = document.getElementById(`char-${i}`);
-    if (!span) continue;
-
-    if (typedText[i] == null) {
-        span.style.color = '#ffffff'; // اللون الافتراضي
-    } else if (typedText[i] === currentText[i]) {
-        span.style.color = 'var(--success)'; // أخضر
-    } else {
-        span.style.color = 'var(--error)'; // أحمر
-    }
-}
-
+            
             // حساب نسبة التطابق
             const progress = calculateTextProgress(typedText, currentText);
             
@@ -976,7 +954,7 @@
             
             // تحديث واجهة المستخدم
             elements.progressIndicator.textContent = `${gameState.currentTextIndex + 1}/${sampleTexts.length}`;
-            renderColoredText(currentText);
+            elements.textPrompt.textContent = sampleTexts[gameState.currentTextIndex];
             elements.typingInput.value = '';
             elements.typingInput.disabled = false;
             elements.typingInput.focus();
@@ -1150,46 +1128,7 @@
                 elements.playersContainer.appendChild(playerEl);
             });
         }
-        function renderColoredText(text) {
-    const display = document.getElementById('text-display');
-    display.innerHTML = text
-        .split('')
-        .map((char, index) => `<span id="char-${index}">${char}</span>`)
-        .join('');
-}
-    const text = "هذا هو النص الذي يجب كتابته بشكل صحيح"; // النص الهدف
-    const input = document.querySelector('.typing-input');
-    const display = document.getElementById('text-display');
-
-    // عرض النص الأصلي مفصّلًا عند البداية
-    function renderText() {
-        display.innerHTML = text
-            .split('')
-            .map((char, index) => `<span id="char-${index}">${char}</span>`)
-            .join('');
-    }
-
-    input.addEventListener('input', () => {
-        const userInput = input.value;
-
-        for (let i = 0; i < text.length; i++) {
-            const charSpan = document.getElementById(`char-${i}`);
-            const char = text[i];
-            const typedChar = userInput[i];
-
-            if (typedChar == null) {
-                charSpan.style.color = '#ffffff'; // افتراضي
-            } else if (typedChar === char) {
-                charSpan.style.color = '#4caf50'; // أخضر
-            } else {
-                charSpan.style.color = '#f44336'; // أحمر
-            }
-        }
-    });
-
-    renderText();
-
-
+        
         // توليد معرف فريد
         function generateUUID() {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -1198,72 +1137,6 @@
                 return v.toString(16);
             });
         }
-        const express = require('express');
-const http = require('http');
-const { Server } = require("socket.io");
-
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
-let rooms = {}; // كل غرفة تحتوي على لاعبين
-
-io.on('connection', (socket) => {
-    console.log("✅ مستخدم متصل:", socket.id);
-
-    socket.on('join-room', ({ roomCode, username }) => {
-        socket.join(roomCode);
-
-        if (!rooms[roomCode]) rooms[roomCode] = [];
-
-        rooms[roomCode].push({ id: socket.id, name: username, progress: 0 });
-        console.log(`🚪 ${username} دخل الغرفة ${roomCode}`);
-
-        io.to(roomCode).emit('update-players', rooms[roomCode]);
-    });
-
-    socket.on('progress-update', ({ roomCode, progress }) => {
-        const player = rooms[roomCode]?.find(p => p.id === socket.id);
-        if (player) player.progress = progress;
-        socket.to(roomCode).emit('player-progress', { id: socket.id, progress });
-    });
-
-    socket.on('disconnect', () => {
-        for (const room in rooms) {
-            rooms[room] = rooms[room].filter(p => p.id !== socket.id);
-            io.to(room).emit('update-players', rooms[room]);
-        }
-    });
-});
-
-server.listen(3000, () => {
-    console.log('🚀 السيرفر يعمل على http://localhost:3000');
-});
-const socket = io("http://localhost:3000"); // غيّر الرابط عند رفعه
-
-let roomCode = gameState.roomCode;
-let username = gameState.currentPlayer.name;
-
-socket.emit('join-room', { roomCode, username });
-
-socket.on('update-players', (players) => {
-    console.log("✅ اللاعبين:", players);
-    // حدث الواجهة كما تريد
-});
-
-socket.on('player-progress', ({ id, progress }) => {
-    const player = gameState.players.find(p => p.id === id);
-    if (player) {
-        player.progress = progress;
-        updatePlayerProgress(player);
-    }
-});
-
-// لإرسال التقدم
-function sendProgress(progress) {
-    socket.emit('progress-update', { roomCode, progress });
-}
-
     </script>
 </body>
 </html>
